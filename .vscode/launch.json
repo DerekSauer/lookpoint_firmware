@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "rust: cargo build",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "Debug lookpoint_firmware",
+            "cwd": "${workspaceFolder}",
+            "chip": "nRF52840_xxAA",
+            "runtimeExecutable": "probe-rs",
+            "runtimeArgs": [
+                "dap-server"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "haltAfterReset": false
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "target/thumbv7em-none-eabihf/debug/lookpoint_firmware",
+                    "rttEnabled": true
+                }
+            ],
+            "consoleLogLevel": "Console",
+            "wireProtocol": "Swd"
+        }
+    ]
+}

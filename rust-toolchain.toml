@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2024 Derek Sauer
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+[toolchain]
+channel = "stable"
+profile = "default"
+targets = ["thumbv7em-none-eabihf"]

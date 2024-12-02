@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2024 Derek Sauer
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+[default.probe]
+protocol = "Swd"
+
+[default.flashing]
+enabled = true
+
+[default.reset]
+enabled = true
+halt_afterwards = false
+
+[default.general]
+chip = "nRF52840_xxAA"
+
+[default.rtt]
+enabled = true
+
+[default.gdb]
+enabled = false
