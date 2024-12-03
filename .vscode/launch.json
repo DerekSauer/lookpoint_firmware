@@ -20,7 +20,8 @@
                 {
                     "coreIndex": 0,
                     "programBinary": "target/thumbv7em-none-eabihf/debug/lookpoint_firmware",
-                    "rttEnabled": true
+                    "rttEnabled": true,
+                    "svdFile": "./nRF52840/nRF52840.svd"
                 }
             ],
             "consoleLogLevel": "Console",
