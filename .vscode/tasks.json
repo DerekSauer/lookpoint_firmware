@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Erase MCU Flash Memory",
+            "type": "process",
+            "command": "probe-rs",
+            "args": [
+                "erase",
+                "--chip",
+                "nrf52840_xxAA",
+                "--allow-erase-all"
+            ]
+        },
+        {
+            "label": "Flash BLE Softdevice to MCU",
+            "type": "process",
+            "dependsOn": [
+                "Erase MCU Flash Memory"
+            ],
+            "command": "probe-rs",
+            "args": [
+                "download",
+                "--verify",
+                "--binary-format",
+                "hex",
+                "--chip",
+                "nrf52840_xxAA",
+                "./nRF52840/s113_nrf52_7.3.0_softdevice.hex"
+            ]
+        },
+    ]
+}
