@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-only
 
+# Using the `nightly` toolchain so that `embassy-executor` 
+# can statically allocate tasks at compile time.
 [toolchain]
-channel = "stable"
+channel = "nightly"
 profile = "default"
+components = ["llvm-tools"]
 targets = ["thumbv7em-none-eabihf"]
