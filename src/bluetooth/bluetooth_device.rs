@@ -104,9 +104,13 @@ impl BluetoothDevice<()> {
             ..Default::default()
         };
 
+        let softdevice = Softdevice::enable(&ble_config);
+
+        defmt::info!("Bluetooth controller enabled.");
+
         BluetoothDevice {
             internal_state: Enabled {
-                softdevice: Softdevice::enable(&ble_config),
+                softdevice,
                 max_connections,
             },
         }
@@ -128,9 +132,18 @@ impl BluetoothDevice<Enabled> {
     /// Start the back ground task managing the Bluetooth
     /// protocol stack's event loop.
     pub fn run(self, task_spawner: &embassy_executor::Spawner) -> BluetoothDevice<Running> {
+        // Enable DC/DC mode so the Bluetooth controller can manage the DC/DC regulator.
+        // When transmitting it will enable the regulator to efficiently supply
+        // high voltage to the radio and switch back to LDO when not transmitting.
+        unsafe {
+            SoftdeviceAPI::sd_power_dcdc_mode_set(
+                SoftdeviceAPI::NRF_POWER_DCDC_MODES_NRF_POWER_DCDC_ENABLE as u8,
+            );
+        }
+
         match task_spawner.spawn(softdevice_task(self.internal_state.softdevice)) {
             Ok(_) => {
-                defmt::info!("Bluetooth protocol stack background task started.");
+                defmt::info!("Bluetooth controller event loop started.");
             }
             Err(err) => match err {
                 embassy_executor::SpawnError::Busy => {
