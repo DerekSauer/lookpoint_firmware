@@ -14,8 +14,7 @@ impl<S: BluetoothDeviceState> BluetoothDevice<S> {}
 
 /// Methods available to an unconstructed `BluetoothDevice`.
 impl BluetoothDevice<()> {
-    /// Initialize the Bluetooth device and configure the low level BLE
-    /// controller.
+    /// Initialize the Bluetooth device and configure the Bluetooth controller.
     pub fn new<StrLike: AsRef<str>>(
         device_name: StrLike,
         max_connections: u8,
@@ -117,31 +116,38 @@ impl BluetoothDevice<()> {
     }
 }
 
-/// Attributes available to a `BluetoothDevice` in an `Initialized` state.
+/// Attributes available to a `BluetoothDevice` in an `Enabled` state.
 pub struct Enabled {
-    /// Handle to the initialized nRF Softdevice Bluetooth protocol stack.
+    /// Handle to the initialized nRF Softdevice Bluetooth controller.
     /// This reference is statically allocated in the Softdevice implementation.
-    softdevice: &'static Softdevice,
+    softdevice: &'static mut Softdevice,
 
     /// Maximum number of connections this `BluetoothDevice` can manage.
     max_connections: u8,
 }
 
-/// Methods available to a `BluetoothDevice` in an `Initialized` state.
+/// Methods available to a `BluetoothDevice` in an `Enabled` state.
 impl BluetoothDevice<Enabled> {
-    /// Start the back ground task managing the Bluetooth
-    /// protocol stack's event loop.
+    /// Start the back ground task managing the Bluetooth controller's event
+    /// loop.
     pub fn run(self, task_spawner: &embassy_executor::Spawner) -> BluetoothDevice<Running> {
         // Enable DC/DC mode so the Bluetooth controller can manage the DC/DC regulator.
         // When transmitting it will enable the regulator to efficiently supply
         // high voltage to the radio and switch back to LDO when not transmitting.
+        // UNSAFE: Safe when the `BluetoothDevice` is in its `Enabled` state.
         unsafe {
             SoftdeviceAPI::sd_power_dcdc_mode_set(
                 SoftdeviceAPI::NRF_POWER_DCDC_MODES_NRF_POWER_DCDC_ENABLE as u8,
             );
         }
 
-        match task_spawner.spawn(softdevice_task(self.internal_state.softdevice)) {
+        // We'll keep the mutable reference to the Bluetooth controller for our own uses
+        // and send an immutable reference to the task running the controller's event
+        // loop.
+        // UNSAFE: Safe when the `BluetoothDevice` is in its `Enabled` state.
+        let immutable_sd = unsafe { Softdevice::steal() };
+
+        match task_spawner.spawn(softdevice_task(immutable_sd)) {
             Ok(_) => {
                 defmt::info!("Bluetooth controller event loop started.");
             }
@@ -163,9 +169,9 @@ impl BluetoothDevice<Enabled> {
 
 /// Attributes available to a `BluetoothDevice` in a `Running` state.
 pub struct Running {
-    /// Handle to the initialized nRF Softdevice Bluetooth protocol stack.
-    /// SAFETY: This handle points to an object owned by the Softdevice.
-    softdevice: &'static Softdevice,
+    /// Handle to the initialized nRF Softdevice Bluetooth controller.
+    /// This reference is statically allocated in the Softdevice implementation.
+    softdevice: &'static mut Softdevice,
 
     /// Maximum number of connections this `BluetoothDevice` can manage.
     pub max_connections: u8,
