@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #![cfg_attr(debug_assertions, allow(dead_code, unused_variables))]
-#![cfg_attr(feature = "nightly", feature(impl_trait_in_assoc_type))]
 #![no_main]
 #![no_std]
 
 mod bluetooth;
 
-use bluetooth::bluetooth_device::BluetoothDevice;
+use bluetooth::server::BluetoothServer;
 use defmt_rtt as _;
 use embassy_nrf as _;
 use panic_probe as _;
@@ -43,8 +42,7 @@ async fn inner_main(task_spawner: embassy_executor::Spawner) {
 
     init_peripherals();
 
-    let bluetooth_device =
-        BluetoothDevice::new(DEVICE_NAME, MAX_BLE_CONNECTIONS).run(&task_spawner);
+    let bluetooth_server = BluetoothServer::new(DEVICE_NAME, MAX_BLE_CONNECTIONS, &task_spawner);
 }
 
 /// Stub entry point.
