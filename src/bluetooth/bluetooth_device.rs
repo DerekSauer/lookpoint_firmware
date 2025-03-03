@@ -4,6 +4,9 @@
 
 use nrf_softdevice::{raw as SoftdeviceAPI, Softdevice};
 
+// Maximum length of the device's local name in bytes.
+const GAP_NAME_MAX_LENGTH: usize = 19;
+
 /// Connection to the microcontroller's Bluetooth device.
 pub struct BluetoothDevice<S: BluetoothDeviceState> {
     internal_state: S,
@@ -15,16 +18,34 @@ impl<S: BluetoothDeviceState> BluetoothDevice<S> {}
 /// Methods available to an unconstructed `BluetoothDevice`.
 impl BluetoothDevice<()> {
     /// Initialize the Bluetooth device and configure the Bluetooth controller.
+    ///
+    /// # Remarks
+    /// `device_local_name` should not be longer than 19 bytes in length.
+    /// If longer than 19 bytes the name will be truncated and a warning emitted.
     pub fn new<StrLike: AsRef<str>>(
-        device_name: StrLike,
+        local_name: StrLike,
         max_connections: u8,
     ) -> BluetoothDevice<Enabled> {
-        let device_name = device_name.as_ref();
-        let device_name_length: u16 = device_name
-            .len()
-            .try_into()
-            .expect("BLE device name too long. Must be no longer than 65535 bytes.");
-        let device_name = device_name.as_ptr();
+        let local_name = local_name.as_ref();
+
+        // If the name is longer than 19 bytes truncate it to the nearest UTF-8 code point that fits
+        // within 19 bytes. This might mangle the last grapheme cluster.
+        let local_name = if local_name.len() > GAP_NAME_MAX_LENGTH {
+            defmt::warn!(
+                "Bluetooth device local name `{}` exceeds 19 bytes, truncating.",
+                local_name
+            );
+            let mut index = GAP_NAME_MAX_LENGTH;
+            while !local_name.is_char_boundary(index) {
+                index -= 1;
+            }
+            &local_name[..index]
+        } else {
+            local_name
+        };
+
+        // UNWRAP: Name length was truncated to 19 bytes or less above.
+        let local_name_length: u16 = local_name.len().try_into().unwrap();
 
         // Note: Some configuration fields require a u8 or u16 but the enums
         // automatically generated from nRF's headers are expressed as u32. It
@@ -60,11 +81,11 @@ impl BluetoothDevice<()> {
         let gap_device_name = SoftdeviceAPI::ble_gap_cfg_device_name_t {
             // Pointer where the name is stored. Wants a mutable pointer but we'll
             // disable writing a new name so this pointer will not be mutated later.
-            p_value: device_name as *mut u8,
+            p_value: local_name.as_ptr() as *mut u8,
 
             // Name length will not change during runtime as changing the name is disabled.
-            current_len: device_name_length,
-            max_len:     device_name_length,
+            current_len: local_name_length,
+            max_len: local_name_length,
 
             // Disable changing the device name during runtime. Security level (0, 0) is nRF
             // specific and not BLE standard.
@@ -160,7 +181,7 @@ impl BluetoothDevice<Enabled> {
 
         BluetoothDevice {
             internal_state: Running {
-                softdevice:      self.internal_state.softdevice,
+                softdevice: self.internal_state.softdevice,
                 max_connections: self.internal_state.max_connections,
             },
         }
@@ -181,7 +202,8 @@ pub struct Running {
 impl BluetoothDevice<Running> {}
 
 /// Background task handling the Softdevice's event loop.
-#[embassy_executor::task]
+/// Only one `softdevice_task` may be running at the same time.
+#[embassy_executor::task(pool_size = 1)]
 async fn softdevice_task(softdevice: &'static Softdevice) {
     softdevice.run().await;
 }
