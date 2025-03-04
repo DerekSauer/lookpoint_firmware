@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
-use super::bluetooth_device::{BluetoothDevice, Running};
+use super::{
+    bluetooth_device::{BluetoothDevice, Running},
+    device_name::DeviceName,
+};
 
 /// Bluetooth server managing the Bluetooth device, handling advertising, and
 /// exposing services to connected clients.
@@ -16,8 +19,8 @@ pub struct BluetoothServer<'executor> {
 
 impl<'executor> BluetoothServer<'executor> {
     /// Start the Bluetooth Server.
-    pub fn new<StrLike: AsRef<str>>(
-        device_name: StrLike,
+    pub fn new(
+        device_name: &DeviceName,
         max_connections: u8,
         task_spawner: &'executor embassy_executor::Spawner,
     ) -> Self {

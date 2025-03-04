@@ -8,16 +8,10 @@
 
 mod bluetooth;
 
-use bluetooth::server::BluetoothServer;
+use bluetooth::{device_name::DeviceName, server::BluetoothServer};
 use defmt_rtt as _;
 use embassy_nrf as _;
 use panic_probe as _;
-
-/// Maximum number of connections the Bluetooth device can manage.
-pub const MAX_BLE_CONNECTIONS: u8 = 1;
-
-/// Name of this device.
-pub const DEVICE_NAME: &str = "Lookpoint Tracker";
 
 /// Initialize MCU peripherals and configure interrupts.
 fn init_peripherals() {
@@ -42,7 +36,8 @@ async fn inner_main(task_spawner: embassy_executor::Spawner) {
 
     init_peripherals();
 
-    let bluetooth_server = BluetoothServer::new(DEVICE_NAME, MAX_BLE_CONNECTIONS, &task_spawner);
+    let device_name = DeviceName::from("Lookpoint Tracker");
+    let _bluetooth_server = BluetoothServer::new(&device_name, 1, &task_spawner);
 }
 
 /// Stub entry point.

@@ -4,4 +4,5 @@
 
 pub mod advertiser;
 pub mod bluetooth_device;
+pub mod device_name;
 pub mod server;
