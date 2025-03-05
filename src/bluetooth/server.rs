@@ -13,6 +13,9 @@ pub struct BluetoothServer<'executor> {
     /// Connection to the initialized and running Bluetooth controller.
     bluetooth_device: BluetoothDevice<Running>,
 
+    /// Maximum number of connections the Bluetooth server can manage.
+    max_connections: u8,
+
     /// Reference to the Embassy executor's task spawner.
     task_spawner: &'executor embassy_executor::Spawner,
 }
@@ -26,6 +29,7 @@ impl<'executor> BluetoothServer<'executor> {
     ) -> Self {
         Self {
             bluetooth_device: BluetoothDevice::new(device_name, max_connections).run(task_spawner),
+            max_connections,
             task_spawner,
         }
     }

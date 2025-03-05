@@ -106,10 +106,7 @@ impl BluetoothDevice<()> {
         defmt::info!("Bluetooth controller enabled.");
 
         BluetoothDevice {
-            internal_state: Enabled {
-                softdevice,
-                max_connections,
-            },
+            internal_state: Enabled { softdevice },
         }
     }
 }
@@ -119,9 +116,6 @@ pub struct Enabled {
     /// Handle to the initialized nRF Softdevice Bluetooth controller.
     /// This reference is statically allocated in the Softdevice implementation.
     softdevice: &'static mut Softdevice,
-
-    /// Maximum number of connections this `BluetoothDevice` can manage.
-    max_connections: u8,
 }
 
 /// Methods available to a `BluetoothDevice` in an `Enabled` state.
@@ -159,7 +153,6 @@ impl BluetoothDevice<Enabled> {
         BluetoothDevice {
             internal_state: Running {
                 softdevice: self.internal_state.softdevice,
-                max_connections: self.internal_state.max_connections,
             },
         }
     }
@@ -170,9 +163,6 @@ pub struct Running {
     /// Handle to the initialized nRF Softdevice Bluetooth controller.
     /// This reference is statically allocated in the Softdevice implementation.
     softdevice: &'static mut Softdevice,
-
-    /// Maximum number of connections this `BluetoothDevice` can manage.
-    pub max_connections: u8,
 }
 
 /// Methods available to a `BluetoothDevice` in a `Running` state.
