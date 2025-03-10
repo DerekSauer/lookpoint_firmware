@@ -15,7 +15,7 @@ impl<'a> DeviceName<'a> {
     /// the returned value will be a slice of that string that fits within the limit. The string will
     /// be truncated at the nearest UTF-8 code point that fits within the limit.
     pub fn new(name: &'a str) -> Self {
-        let device_name = if name.len() > MAX_LOCAL_NAME_LENGTH {
+        if name.len() > MAX_LOCAL_NAME_LENGTH {
             let mut index = MAX_LOCAL_NAME_LENGTH;
             while !name.is_char_boundary(index) {
                 index -= 1;
@@ -28,12 +28,10 @@ impl<'a> DeviceName<'a> {
                 &name[..index]
             );
 
-            &name[..index]
+            Self(&name[..index])
         } else {
-            name
-        };
-
-        DeviceName(device_name)
+            Self(name)
+        }
     }
 
     /// Returns the `DeviceName` length, in bytes.
