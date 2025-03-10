@@ -37,6 +37,7 @@ embassy-time = { version = "0.4", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
 
 nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice.git", branch = "master", features = [
     "nrf52840",
