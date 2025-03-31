@@ -6,8 +6,8 @@
 name = "lookpoint_firmware"
 version = "0.1.0"
 authors = ["Derek Sauer <dereksauer.ca@gmail.com>"]
-edition = "2021"
-rust-version = "1.80"
+edition = "2024"
+rust-version = "1.85"
 description = "Firmware for the Lookpoint head tracking device"
 documentation = "https://github.com/dereksauer/lookpoint-firmware"
 readme = "README.md"
@@ -19,38 +19,54 @@ name = "lookpoint_firmware"
 harness = false
 
 [dependencies]
-embassy-executor = { version = "0.7", features = [
+embassy-executor = { version = "0.7", default-features = false, features = [
   "arch-cortex-m",
-  "executor-thread",
+  "defmt",
   "executor-interrupt",
+  "executor-thread",
   "nightly",
+] }
+embassy-futures = { version = "0.1.1", default-features = false, features = [
   "defmt",
 ] }
-embassy-nrf = { version = "0.3", features = [
-  "nrf52840",
+embassy-nrf = { version = "0.3", default-features = false, features = [
+  "defmt",
   "gpiote",
-  "time",
+  "nrf52840",
+  "rt",
   "time-driver-rtc1",
   "unstable-pac",
-  "defmt",
 ] }
-embassy-time = { version = "0.4", features = [
+embassy-time = { version = "0.4", default-features = false, features = [
   "defmt",
   "defmt-timestamp-uptime",
 ] }
-embassy-sync = { version = "0.6.2", features = ["defmt"] }
-
-nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice.git", branch = "master", features = [
-  "nrf52840",
-  "s113",
-  "ble-peripheral",
-  "critical-section",
-  "critical-section-impl",
+embassy-sync = { version = "0.6.2", default-features = false, features = [
   "defmt",
 ] }
 
-cortex-m = { version = "0.7.7", features = ["inline-asm"] }
+cortex-m = { version = "0.7.7", features = [
+  "critical-section-single-core",
+  "inline-asm",
+] }
 cortex-m-rt = { version = "0.7.5", features = ["device"] }
+
+bt-hci = { version = "0.2.1", default-features = false, features = ["defmt"] }
+nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "e5dbb34d5509934490bf94e6eb466d7da8ce9ef4", default-features = false, features = [
+  "defmt",
+  "nrf52840",
+  "peripheral",
+] }
+nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "e5dbb34d5509934490bf94e6eb466d7da8ce9ef4", default-features = false, features = [
+  "defmt",
+  "nrf52840",
+] }
+trouble-host = { version = "0.1.0", default-features = false, features = [
+  "defmt",
+  "derive",
+  "gatt",
+  "peripheral",
+] }
 
 defmt = "0.3.9"
 defmt-rtt = "0.4.1"
