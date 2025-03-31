@@ -7,10 +7,6 @@
 #![no_main]
 #![no_std]
 
-mod bluetooth;
-
-use bluetooth::device_name::DeviceName;
-use bluetooth::server::BluetoothServer;
 use {defmt_rtt as _, panic_probe as _};
 
 /// Entry point.
@@ -19,9 +15,6 @@ async fn main(task_spawner: embassy_executor::Spawner) {
     defmt::info!("Device is starting up.");
 
     let peripherals = init_peripherals();
-
-    let device_name = DeviceName::from("Lookpoint Tracker");
-    let bluetooth_server = BluetoothServer::new(&device_name, 2, task_spawner);
 }
 
 /// Initialize the MCU, its peripherals, and interrupts.
