@@ -142,7 +142,6 @@ checksum = "8ec610d8f49840a5b376c69663b6369e71f4b34484b9b2eb29fb918d92516cb9"
 dependencies = [
  "bare-metal",
  "bitfield",
- "critical-section",
  "embedded-hal 0.2.7",
  "volatile-register",
 ]
@@ -694,6 +693,7 @@ dependencies = [
  "nrf-mpsl",
  "nrf-sdc",
  "panic-probe",
+ "static_cell",
  "trouble-host",
 ]
 
@@ -740,6 +740,7 @@ version = "0.1.0"
 source = "git+https://github.com/alexmoon/nrf-sdc.git?rev=e5dbb34d5509934490bf94e6eb466d7da8ce9ef4#e5dbb34d5509934490bf94e6eb466d7da8ce9ef4"
 dependencies = [
  "cortex-m",
+ "critical-section",
  "defmt",
  "embassy-nrf",
  "embassy-sync",
