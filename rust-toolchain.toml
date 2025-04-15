@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Derek Sauer
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+[toolchain]
+channel = "nightly" # We're using embassy-executor's nightly features
+targets = ["thumbv7em-none-eabihf"]
