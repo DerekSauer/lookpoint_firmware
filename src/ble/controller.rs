@@ -43,22 +43,6 @@ embassy_nrf::bind_interrupts!(
     }
 );
 
-/// Multiservice Protocol Layer.
-/// The BLE Softdevice takes control of numerous system resources, peripherals,
-/// and interrupts. The MPSL provides and interface where the application can
-/// schedule to access these resources in a manner that does not conflict with
-/// the Softdevice's use of these resources or the use of the radio.
-static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
-
-/// Random number generation driver used by the Softdevice for cryptographic
-/// functions.
-static SOFTDEVICE_RNG_DRIVER: StaticCell<rng::Rng<peripherals::RNG>> = StaticCell::new();
-
-/// RAM reserved for the Softdevice, in bytes. The amount of RAM needed will
-/// differ depending on which Softdevice features are enabled. A warning will be
-/// logged if the amount is not correct. Will panic if the amount is too low.
-static SOFTDEVICE_MEMORY: StaticCell<nrf_sdc::Mem<1448>> = StaticCell::new();
-
 /// Initialize the Bluetooth Low Energy controller. This is one half of the host
 /// controller interface providing low level management of the radio and
 /// associated resources.
@@ -79,22 +63,40 @@ pub fn initialize_ble_controller<'a>(
     SoftdeviceController<'a>,
     &'static MultiprotocolServiceLayer<'a>,
 ) {
-    let mpsl = MPSL.init_with(|| {
-        match MultiprotocolServiceLayer::new(mpsl_peripherals, MPSLIrqs, MPSL_CLOCK_CONFIG) {
-            Ok(initialized_mpsl) => initialized_mpsl,
-            Err(error) => defmt::panic!(
-                "BLE: failed to initialze Multiprotocol Service Layer with error: {}",
-                error
-            ),
-        }
-    });
+    // The BLE Softdevice takes control of numerous system resources,
+    // peripherals, and interrupts. The MPSL provides and interface where
+    // the application can schedule to access these resources in a manner
+    // that does not conflict with the Softdevice's use of these resources
+    // or the use of the radio.
+    let mpsl = {
+        static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
+        MPSL.init_with(|| {
+            match MultiprotocolServiceLayer::new(mpsl_peripherals, MPSLIrqs, MPSL_CLOCK_CONFIG) {
+                Ok(initialized_mpsl) => initialized_mpsl,
+                Err(error) => defmt::panic!(
+                    "BLE: failed to initialze Multiprotocol Service Layer with error: {}",
+                    error
+                ),
+            }
+        })
+    };
 
     defmt::info!("BLE: Multiprotocol Service Layer initialized.");
 
-    let softdevice_rng_driver =
-        SOFTDEVICE_RNG_DRIVER.init_with(|| rng::Rng::new(rng_peripheral, RngIrq));
+    // Random number generation driver used by the Softdevice for cryptographic
+    // functions.
+    let softdevice_rng_driver = {
+        static SOFTDEVICE_RNG_DRIVER: StaticCell<rng::Rng<peripherals::RNG>> = StaticCell::new();
+        SOFTDEVICE_RNG_DRIVER.init_with(|| rng::Rng::new(rng_peripheral, RngIrq))
+    };
 
-    let softdevice_memory = SOFTDEVICE_MEMORY.init_with(|| nrf_sdc::Mem::new());
+    // RAM reserved for the Softdevice, in bytes. The amount of RAM needed will
+    // differ depending on which Softdevice features are enabled. A warning will be
+    // logged if the amount is not correct. Will panic if the amount is too low.
+    let softdevice_memory = {
+        static SOFTDEVICE_MEMORY: StaticCell<nrf_sdc::Mem<1448>> = StaticCell::new();
+        SOFTDEVICE_MEMORY.init_with(|| nrf_sdc::Mem::new())
+    };
 
     let softdevice = match build_softdevice(
         softdevice_peripherals,
