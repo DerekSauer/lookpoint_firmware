@@ -64,15 +64,18 @@ pub fn initialize_ble_controller<'a>(
     &'static MultiprotocolServiceLayer<'a>,
 ) {
     // The BLE Softdevice takes control of numerous system resources,
-    // peripherals, and interrupts. The MPSL provides and interface where
-    // the application can schedule to access these resources in a manner
-    // that does not conflict with the Softdevice's use of these resources
-    // or the use of the radio.
+    // peripherals, and interrupts. The MPSL provides an interface where
+    // the application can schedule a time to access these resources in a manner
+    // that does not conflict with the Softdevice's use of these resources or the
+    // radio.
     let mpsl = {
         static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
         MPSL.init_with(|| {
             match MultiprotocolServiceLayer::new(mpsl_peripherals, MPSLIrqs, MPSL_CLOCK_CONFIG) {
-                Ok(initialized_mpsl) => initialized_mpsl,
+                Ok(initialized_mpsl) => {
+                    defmt::info!("BLE: Multiprotocol Service Layer initialized.");
+                    initialized_mpsl
+                }
                 Err(error) => defmt::panic!(
                     "BLE: failed to initialze Multiprotocol Service Layer with error: {}",
                     error
@@ -80,8 +83,6 @@ pub fn initialize_ble_controller<'a>(
             }
         })
     };
-
-    defmt::info!("BLE: Multiprotocol Service Layer initialized.");
 
     // Random number generation driver used by the Softdevice for cryptographic
     // functions.
@@ -104,13 +105,14 @@ pub fn initialize_ble_controller<'a>(
         softdevice_memory,
         mpsl,
     ) {
-        Ok(initialized_softdevice) => initialized_softdevice,
+        Ok(initialized_softdevice) => {
+            defmt::info!("BLE: Softdevice initialized.");
+            initialized_softdevice
+        }
         Err(error) => {
             defmt::panic!("BLE: failed to initialze Softdevice with error: {}", error)
         }
     };
-
-    defmt::info!("BLE: Softdevice initialized.");
 
     (softdevice, mpsl)
 }
