@@ -59,6 +59,7 @@ nrf-mpsl = { version = "0.1.0", default-features = false, features = [
   "nrf52840",
 ] }
 trouble-host = { version = "0.1.0", default-features = false, features = [
+  "default-packet-pool",
   "defmt",
   "derive",
   "gatt",
@@ -82,4 +83,4 @@ embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19
 # Prerelease versions of Bluetooth HCI crates
 nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "4f2af99b87ae07c0b5634d32e4a62e26876e5be3" }
 nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "4f2af99b87ae07c0b5634d32e4a62e26876e5be3" }
-trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "c6a0e5f32449f049613ae6253a1f7a3814d32044" }
+trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "2128a22360300554b90efaa7804c759b24a60fad" }

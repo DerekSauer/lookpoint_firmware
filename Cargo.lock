@@ -1082,7 +1082,7 @@ dependencies = [
 [[package]]
 name = "trouble-host"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/trouble.git?rev=c6a0e5f32449f049613ae6253a1f7a3814d32044#c6a0e5f32449f049613ae6253a1f7a3814d32044"
+source = "git+https://github.com/embassy-rs/trouble.git?rev=2128a22360300554b90efaa7804c759b24a60fad#2128a22360300554b90efaa7804c759b24a60fad"
 dependencies = [
  "bt-hci",
  "defmt 0.3.100",
@@ -1101,7 +1101,7 @@ dependencies = [
 [[package]]
 name = "trouble-host-macros"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/trouble.git?rev=c6a0e5f32449f049613ae6253a1f7a3814d32044#c6a0e5f32449f049613ae6253a1f7a3814d32044"
+source = "git+https://github.com/embassy-rs/trouble.git?rev=2128a22360300554b90efaa7804c759b24a60fad#2128a22360300554b90efaa7804c759b24a60fad"
 dependencies = [
  "Inflector",
  "darling",
