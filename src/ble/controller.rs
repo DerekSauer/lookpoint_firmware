@@ -56,6 +56,7 @@ embassy_nrf::bind_interrupts!(
 /// and the application will panic with an error code. The error code is derived
 /// from the Softdevice's C API.
 pub fn initialize_ble_controller<'a>(
+    task_spawner: embassy_executor::Spawner,
     mpsl_peripherals: nrf_sdc::mpsl::Peripherals<'a>,
     softdevice_peripherals: nrf_sdc::Peripherals<'a>,
     rng_peripheral: Peri<'a, peripherals::RNG>,
@@ -73,16 +74,20 @@ pub fn initialize_ble_controller<'a>(
         MPSL.init_with(|| {
             match MultiprotocolServiceLayer::new(mpsl_peripherals, MPSLIrqs, MPSL_CLOCK_CONFIG) {
                 Ok(initialized_mpsl) => {
-                    defmt::info!("BLE: Multiprotocol Service Layer initialized.");
+                    defmt::info!("[ble] multiprotocol service layer initialized");
                     initialized_mpsl
                 }
-                Err(error) => defmt::panic!(
-                    "BLE: failed to initialze Multiprotocol Service Layer with error: {}",
+                Err(error) => panic!(
+                    "[ble] failed to initialize multiprotocol service layer with error: {}",
                     error
                 ),
             }
         })
     };
+
+    // The MPSL runs its own event loop behind the scenes.
+    task_spawner.must_spawn(mpsl_task(mpsl));
+    defmt::info!("[ble] multiprotocol service layer event loop task started");
 
     // Random number generation driver used by the Softdevice for cryptographic
     // functions.
@@ -106,11 +111,14 @@ pub fn initialize_ble_controller<'a>(
         mpsl,
     ) {
         Ok(initialized_softdevice) => {
-            defmt::info!("BLE: Softdevice initialized.");
+            defmt::info!("[ble] controller initialized");
             initialized_softdevice
         }
         Err(error) => {
-            defmt::panic!("BLE: failed to initialze Softdevice with error: {}", error)
+            panic!(
+                "[ble] failed to initialize controller with error: {}",
+                error
+            )
         }
     };
 
@@ -128,11 +136,17 @@ fn build_softdevice<'a, const N: usize>(
     nrf_sdc::Builder::new()?
         .support_adv()?
         .support_peripheral()?
-        .peripheral_count(1)?
+        .peripheral_count(super::NUM_PERIPH_CONNECTIONS as u8)?
         .build(
             softdevice_peripherals,
             softdevice_rng_driver,
             mpsl,
             softdevice_memory,
         )
+}
+
+/// Task that will run the multiprotocol service layer's event loop.
+#[embassy_executor::task]
+pub async fn mpsl_task(mpsl: &'static mpsl::MultiprotocolServiceLayer<'static>) -> ! {
+    mpsl.run().await;
 }
