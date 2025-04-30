@@ -47,7 +47,7 @@ embassy-sync = { version = "0.6.2", default-features = false, features = [
 cortex-m = { version = "0.7.7", features = ["inline-asm"] }
 cortex-m-rt = { version = "0.7.5", features = ["device"] }
 
-bt-hci = { version = "0.3.0", default-features = false, features = ["defmt"] }
+bt-hci = { version = "0.3.1", default-features = false, features = ["defmt"] }
 nrf-sdc = { version = "0.1.0", default-features = false, features = [
   "defmt",
   "nrf52840",
@@ -60,6 +60,7 @@ nrf-mpsl = { version = "0.1.0", default-features = false, features = [
 ] }
 trouble-host = { version = "0.1.0", default-features = false, features = [
   "default-packet-pool",
+  "default-packet-pool-mtu-255",
   "defmt",
   "derive",
   "gatt",
@@ -74,13 +75,13 @@ static_cell = "2.1.0"
 
 [patch.crates-io]
 # Prerelease embassy crates with new peripheral traits (Peri)
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19031d0c007628569add51ff89ae08447" }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19031d0c007628569add51ff89ae08447" }
-embassy-nrf = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19031d0c007628569add51ff89ae08447" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19031d0c007628569add51ff89ae08447" }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "f1feedf19031d0c007628569add51ff89ae08447" }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
+embassy-nrf = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
 
 # Prerelease versions of Bluetooth HCI crates
-nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "4f2af99b87ae07c0b5634d32e4a62e26876e5be3" }
-nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "4f2af99b87ae07c0b5634d32e4a62e26876e5be3" }
-trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "2128a22360300554b90efaa7804c759b24a60fad" }
+nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "fbd0ea1d358740de45f03bae4ec8a95c74db01d0" }
+nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "fbd0ea1d358740de45f03bae4ec8a95c74db01d0" }
+trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "eac5e45b56f8c2324bb09cab844578db32d637b5" }
