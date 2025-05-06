@@ -8,7 +8,7 @@
 #![no_main]
 #![no_std]
 
-mod ble;
+mod service_layer;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -19,46 +19,16 @@ async fn main(task_spawner: embassy_executor::Spawner) {
 
     let peripherals = init_peripherals();
 
-    let (ble_controller, mpsl) = ble::controller::initialize_ble_controller(
+    let service_layer = service_layer::ServiceLayer::new(
+        peripherals.RTC0,
+        peripherals.TIMER0,
+        peripherals.TEMP,
+        peripherals.NVMC,
+        peripherals.PPI_CH19,
+        peripherals.PPI_CH30,
+        peripherals.PPI_CH31,
         task_spawner,
-        nrf_sdc::mpsl::Peripherals::new(
-            peripherals.RTC0,
-            peripherals.TIMER0,
-            peripherals.TEMP,
-            peripherals.PPI_CH19,
-            peripherals.PPI_CH30,
-            peripherals.PPI_CH31,
-        ),
-        nrf_sdc::Peripherals::new(
-            peripherals.PPI_CH17,
-            peripherals.PPI_CH18,
-            peripherals.PPI_CH20,
-            peripherals.PPI_CH21,
-            peripherals.PPI_CH22,
-            peripherals.PPI_CH23,
-            peripherals.PPI_CH24,
-            peripherals.PPI_CH25,
-            peripherals.PPI_CH26,
-            peripherals.PPI_CH27,
-            peripherals.PPI_CH28,
-            peripherals.PPI_CH29,
-        ),
-        peripherals.RNG,
     );
-
-    let ficr = embassy_nrf::pac::FICR;
-    let high = u64::from(ficr.deviceid(1).read());
-    let addr = high << 32 | u64::from(ficr.deviceid(0).read());
-    let addr = addr | 0x0000_c000_0000_0000;
-    let addr: [u8; 6] = addr.to_le_bytes()[..6].try_into().unwrap();
-
-    ble::gatt_server::run(
-        "Lookpoint Tracker".into(),
-        addr,
-        task_spawner,
-        ble_controller,
-    )
-    .await;
 }
 
 /// Initialize the MCU, its peripherals, and interrupts.
