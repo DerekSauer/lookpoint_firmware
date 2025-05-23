@@ -72,16 +72,18 @@ defmt-rtt = "1.0.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
 static_cell = "2.1.0"
+rand_core = "0.9"
+rand_chacha = { version = "0.9", default-features = false }
 
 [patch.crates-io]
 # Prerelease embassy crates with new peripheral traits (Peri)
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
-embassy-nrf = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "52e4c7c30c5f59d10afbef2447b96da68f4be0bc" }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "94f9b2707486ca3eade5bf4b237edf3d6aa90f35" }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy", rev = "94f9b2707486ca3eade5bf4b237edf3d6aa90f35" }
+embassy-nrf = { git = "https://github.com/embassy-rs/embassy", rev = "94f9b2707486ca3eade5bf4b237edf3d6aa90f35" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "94f9b2707486ca3eade5bf4b237edf3d6aa90f35" }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "94f9b2707486ca3eade5bf4b237edf3d6aa90f35" }
 
 # Prerelease versions of Bluetooth HCI crates
-nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "fbd0ea1d358740de45f03bae4ec8a95c74db01d0" }
-nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "fbd0ea1d358740de45f03bae4ec8a95c74db01d0" }
-trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "eac5e45b56f8c2324bb09cab844578db32d637b5" }
+nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "ec208e3659099e9d31c3bc4948c742142ef5ca28" }
+nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc.git", rev = "ec208e3659099e9d31c3bc4948c742142ef5ca28" }
+trouble-host = { git = "https://github.com/embassy-rs/trouble.git", rev = "925d66d94654451257e9741ee76341e5c749b091" }
