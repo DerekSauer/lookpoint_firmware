@@ -134,6 +134,11 @@ impl ServiceLayer<'_> {
         Self { mpsl, flash_driver }
     }
 
+    /// Get a reference to the underlying MPSL.
+    pub fn get_mpsl_ref(&self) -> &MultiprotocolServiceLayer<'static> {
+        self.mpsl
+    }
+
     /// Measure the temperature on chip, to nearest °C.
     /// This is a blocking operation that can take 50us plus the delay until
     /// next free timeslot where the radio is not performing an operation.
