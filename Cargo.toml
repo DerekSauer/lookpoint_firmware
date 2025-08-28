@@ -7,7 +7,7 @@ name = "lookpoint_firmware"
 version = "0.1.0"
 authors = ["Derek Sauer <dereksauer.ca@gmail.com>"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "Firmware for the Lookpoint head tracking device"
 documentation = "https://github.com/dereksauer/lookpoint-firmware"
 readme = "README.md"
@@ -19,27 +19,50 @@ name = "lookpoint_firmware"
 harness = false
 
 [dependencies]
-embassy-executor = { version = "0.9", default-features = false, features = ["arch-cortex-m", "defmt", "executor-interrupt", "executor-thread", "nightly"] }
-embassy-futures = { version = "0.1.1", default-features = false, features = ["defmt"] }
-embassy-nrf = { version = "0.6", default-features = false, features = ["defmt", "gpiote", "nrf52840", "rt", "time-driver-rtc1"] }
-embassy-time = { version = "0.5", default-features = false, features = ["defmt", "defmt-timestamp-uptime"] }
-embassy-sync = { version = "0.7.2", default-features = false, features = ["defmt"] }
-
-cortex-m = { version = "0.7.7", features = ["inline-asm"] }
-cortex-m-rt = { version = "0.7.5", features = ["device"] }
-
-bt-hci = { version = "0.4.0", default-features = false, features = ["defmt"] }
-nrf-sdc = { version = "0.2.0", default-features = false, features = ["defmt", "nrf52840", "peripheral"] }
-nrf-mpsl = { version = "0.2.0", default-features = false, features = ["critical-section-impl", "defmt", "nrf52840"] }
-trouble-host = { version = "0.2.4", default-features = false, features = ["default-packet-pool", "default-packet-pool-mtu-255", "defmt", "derive", "gatt", "peripheral"] }
-
+# Cross platform crates.
+bt-hci = { version = "0.4.0", features = ["defmt"] }
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
-panic-probe = { version = "1.0.0", features = ["print-defmt"] }
-
-static_cell = "2.1.0"
+embassy-executor = { version = "0.9", features = ["defmt"] }
+embassy-futures = { version = "0.1.1", features = ["defmt"] }
+embassy-time = { version = "0.5", features = ["defmt"] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
+panic-probe = { version = "1.0.0", features = ["print-defmt"], optional = true }
 rand_core = "0.9"
 rand_chacha = { version = "0.9", default-features = false }
+static_cell = "2.1.0"
+trouble-host = { version = "0.2.4", features = ["default-packet-pool", "defmt", "derive", "gatt", "peripheral", "security"] }
+
+# Crates specific to Cortex-M processors.
+cortex-m = { version = "0.7.7", features = ["inline-asm"], optional = true }
+cortex-m-rt = { version = "0.7.5", features = ["device"], optional = true }
+
+# Crates specific to NRF chips.
+embassy-nrf = { version = "0.6", features = ["defmt", "gpiote", "rt", "time-driver-rtc1"], optional = true }
+nrf-sdc = { version = "0.2.0", features = ["defmt", "peripheral"], optional = true }
+nrf-mpsl = { version = "0.2.0", features = ["critical-section-impl", "defmt"], optional = true }
+
+[features]
+default = ["nano_33_ble"]
+
+# Enabled for the Arduino Nano 33 BLE.
+nano_33_ble = ["nrf", "nrf52840"]
+
+# Enabled for all NRF platform.
+nrf = [
+    "dep:cortex-m",
+    "dep:cortex-m-rt",
+    "dep:embassy-nrf",
+    "dep:nrf-sdc",
+    "dep:nrf-mpsl",
+    "dep:panic-probe",
+    "embassy-executor/arch-cortex-m",
+    "embassy-executor/executor-interrupt",
+    "embassy-executor/executor-thread",
+]
+
+# NRF 52840 chip.
+nrf52840 = ["embassy-nrf?/nrf52840", "nrf-sdc?/nrf52840", "nrf-mpsl?/nrf52840"]
 
 [profile.release]
 codegen-units = 1
