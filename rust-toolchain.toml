@@ -4,6 +4,6 @@
 
 # We're using the nightly features of embassy-executor and static_cell
 [toolchain]
-channel = "nightly"
+channel = "stable"
 components = ["rust-src", "rustfmt", "llvm-tools"]
 targets = ["thumbv7em-none-eabihf"]

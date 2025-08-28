@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#![feature(impl_trait_in_assoc_type)]
-#![feature(round_char_boundary)]
 #![cfg_attr(debug_assertions, allow(dead_code, unused_variables))]
 #![no_main]
 #![no_std]
