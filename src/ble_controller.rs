@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Derek Sauer
 //
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The Softdevice Controller developed by Nordic Semiconductor provides a
 //! certified Bluetooth Low Energy controller for their MCUs.

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Derek Sauer
 //
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The Multiprotocol Service Layer (MPSL) is a library that provides services
 //! common to the many communication protocols supported by the nRF52's radio.

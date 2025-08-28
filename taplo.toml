@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Derek Sauer
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[formatting]
+inline_table_expand = false
+indent_string = "    "

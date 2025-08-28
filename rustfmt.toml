@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2024 Derek Sauer
 #
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Only options that differ from defaults are listed.
 
@@ -9,7 +9,7 @@
 unstable_features = true
 
 # Stable configuration options.
-edition ="2024"
+edition = "2024"
 use_field_init_shorthand = true
 use_try_shorthand = true
 
@@ -19,7 +19,7 @@ enum_discrim_align_threshold = 30
 format_code_in_doc_comments = true
 format_strings = true
 group_imports = "StdExternalCrate"
-imports_granularity="Module"
+imports_granularity = "Module"
 normalize_comments = true
 normalize_doc_attributes = true
 reorder_impl_items = true

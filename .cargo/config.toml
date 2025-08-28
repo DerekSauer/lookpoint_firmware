@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2024 Derek Sauer
 #
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # The Arduino Nano 33 BLE Rev2 has a Cortex-M4 chip with FPU
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']

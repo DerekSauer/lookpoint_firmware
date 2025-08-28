@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: 2025 Derek Sauer
 #
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 
+# We're using the nightly features of embassy-executor and static_cell
 [toolchain]
-channel = "nightly" # We're using embassy-executor's nightly features
+channel = "nightly"
+components = ["rust-src", "rustfmt", "llvm-tools"]
 targets = ["thumbv7em-none-eabihf"]
