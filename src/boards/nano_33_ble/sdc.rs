@@ -29,30 +29,21 @@
 //! nRF's documentation for the Softdevice is available at:
 //! https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/softdevice_controller/README.html
 
-use core::marker::Send;
-
 use embassy_nrf::{Peri, peripherals};
 use nrf_mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::SoftdeviceController;
-use rand_core::{CryptoRng, RngCore};
 use static_cell::StaticCell;
 
-use crate::service_layer::ServiceLayer;
-
-// Memory reserved for the Softdevice. The amount of memory needed will
-// differ depending on which Softdevice features are enabled. A warning
-// containing the amount needed will be logged. Panic if amount is too low.
-static SOFTDEVICE_MEM: StaticCell<nrf_sdc::Mem<1432>> = StaticCell::new();
+use super::rng_driver::RngDriver;
 
 /// Initialize the Softdevice BLE controller.
 ///
 /// # Panic
 ///
-/// Initialization of the Softdevice is critical to the application. This
-/// function will panic if the Softdevice cannot be initialized. The panic
-/// message will include an error code that may be referenced in nRF's
-/// documentation.
-pub fn initialize_ble_controller<'softdevice, RngDriver: CryptoRng + RngCore + Send>(
+/// The Softdevice is critical to the device's function. Failure to initialize
+/// the Softdevice will cause this function to panic.
+#[allow(clippy::too_many_arguments)]
+pub fn init_ble_controller<'sdc, 'mpsl: 'sdc, 'rng: 'sdc>(
     ppi_ch17: Peri<'static, peripherals::PPI_CH17>,
     ppi_ch18: Peri<'static, peripherals::PPI_CH18>,
     ppi_ch20: Peri<'static, peripherals::PPI_CH20>,
@@ -65,43 +56,47 @@ pub fn initialize_ble_controller<'softdevice, RngDriver: CryptoRng + RngCore + S
     ppi_ch27: Peri<'static, peripherals::PPI_CH27>,
     ppi_ch28: Peri<'static, peripherals::PPI_CH28>,
     ppi_ch29: Peri<'static, peripherals::PPI_CH29>,
-    service_layer: &'softdevice ServiceLayer,
-    rng_driver: &'softdevice mut RngDriver,
-    task_spawner: embassy_executor::Spawner,
-) -> SoftdeviceController<'softdevice> {
-    // This reference will be dropped at the end of this function, but the
-    // Softdevice retains a pointer to the static location in memory.
-    let softdevice_memory = SOFTDEVICE_MEM.init_with(|| nrf_sdc::Mem::new());
-
-    let softdevice_peripherals = nrf_sdc::Peripherals::new(
+    mpsl: &'mpsl MultiprotocolServiceLayer<'_>,
+    rng_driver: &'rng mut RngDriver,
+) -> SoftdeviceController<'sdc> {
+    let peripherals = nrf_sdc::Peripherals::new(
         ppi_ch17, ppi_ch18, ppi_ch20, ppi_ch21, ppi_ch22, ppi_ch23, ppi_ch24, ppi_ch25, ppi_ch26,
         ppi_ch27, ppi_ch28, ppi_ch29,
     );
 
-    let softdevice = match build_softdevice(
-        softdevice_peripherals,
-        rng_driver,
-        softdevice_memory,
-        service_layer.get_mpsl_ref(),
-    ) {
-        Ok(initialized_softdevice) => {
-            defmt::info!("[ble] Softdevice controller initialized");
-            initialized_softdevice
-        }
-        Err(error) => {
-            panic!(
-                "[ble] failed to initialize Softdevice controller with error: {}",
-                error
-            )
-        }
+    // The BLE controller reserves some memory for its internal state.
+    // The amount of memory needed depends on which controller features are enabled
+    // and how many connections it is configured to serve. A warning will be issued
+    // if the amount requested is too low or too high.
+    let memory = {
+        static MEM: StaticCell<nrf_sdc::Mem<1432>> = StaticCell::new();
+        MEM.init_with(|| {
+            let mem = nrf_sdc::Mem::new();
+            defmt::info!(
+                "[controller] memory reserved: {} bytes",
+                core::mem::size_of_val(&mem)
+            );
+            mem
+        })
     };
 
-    softdevice
+    match build_softdevice(peripherals, rng_driver, memory, mpsl) {
+        Ok(sdc) => {
+            defmt::info!("[controller] initialized");
+            sdc
+        }
+        Err(error) => {
+            defmt::panic!(
+                "[controller] unable to initialize, vendor error code: {}",
+                error
+            );
+        }
+    }
 }
 
-/// Convenience function to construct a `SoftdeviceController` with simple error
-/// return.
-fn build_softdevice<'a, const N: usize, RngDriver: CryptoRng + RngCore + Send>(
+/// Convenience function to construct a [`SoftdeviceController`] with simple
+/// error return.
+fn build_softdevice<'a, const N: usize>(
     softdevice_peripherals: nrf_sdc::Peripherals<'a>,
     softdevice_rng_driver: &'a mut RngDriver,
     softdevice_memory: &'a mut nrf_sdc::Mem<N>,
