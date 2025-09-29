@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# We're using the nightly features of embassy-executor and static_cell
 [toolchain]
 channel = "stable"
 components = ["rust-src", "rustfmt", "llvm-tools"]
