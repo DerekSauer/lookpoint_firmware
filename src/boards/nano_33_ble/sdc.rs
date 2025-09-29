@@ -23,27 +23,31 @@
 //! - PPI Channels 17, 18, 20 to 29
 //!
 //! Ownership of the  ECB, CCM, and AAR peripherals cannot be enforced at
-//! compile time so we must ensure they are not used directly elsewhere in the
+//! compile time so we must ensure they are not used elsewhere in the
 //! application.
 //!
 //! nRF's documentation for the Softdevice is available at:
 //! https://docs.nordicsemi.com/bundle/ncs-latest/page/nrfxlib/softdevice_controller/README.html
 
-use embassy_nrf::{Peri, peripherals};
+use embassy_nrf::mode::{self, Async};
+use embassy_nrf::rng::{InterruptHandler, Rng};
+use embassy_nrf::{Peri, bind_interrupts, peripherals};
 use nrf_mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::SoftdeviceController;
+use rand_chacha::ChaChaRng;
+use rand_core::SeedableRng;
 use static_cell::StaticCell;
+use trouble_host::Stack;
+use trouble_host::prelude::DefaultPacketPool;
 
-use super::rng_driver::RngDriver;
+use crate::ble::BleResources;
 
-/// Initialize the Softdevice BLE controller.
-///
-/// # Panic
-///
-/// The Softdevice is critical to the device's function. Failure to initialize
-/// the Softdevice will cause this function to panic.
+/// Amount of memory needed by the Softdevice.
+const SDC_MEM: usize = 1432;
+
+/// Initialize the BLE controller and host.
 #[allow(clippy::too_many_arguments)]
-pub fn init_ble_controller<'sdc, 'mpsl: 'sdc, 'rng: 'sdc>(
+pub fn init_ble_stack<'stack>(
     ppi_ch17: Peri<'static, peripherals::PPI_CH17>,
     ppi_ch18: Peri<'static, peripherals::PPI_CH18>,
     ppi_ch20: Peri<'static, peripherals::PPI_CH20>,
@@ -56,60 +60,94 @@ pub fn init_ble_controller<'sdc, 'mpsl: 'sdc, 'rng: 'sdc>(
     ppi_ch27: Peri<'static, peripherals::PPI_CH27>,
     ppi_ch28: Peri<'static, peripherals::PPI_CH28>,
     ppi_ch29: Peri<'static, peripherals::PPI_CH29>,
-    mpsl: &'mpsl MultiprotocolServiceLayer<'_>,
-    rng_driver: &'rng mut RngDriver,
-) -> SoftdeviceController<'sdc> {
-    let peripherals = nrf_sdc::Peripherals::new(
+    rng: Peri<'static, peripherals::RNG>,
+    mpsl: &'static nrf_sdc::mpsl::MultiprotocolServiceLayer<'static>,
+    address: trouble_host::Address,
+) -> Stack<'stack, SoftdeviceController<'static>, DefaultPacketPool> {
+    let softdevice_peripherals = nrf_sdc::Peripherals::new(
         ppi_ch17, ppi_ch18, ppi_ch20, ppi_ch21, ppi_ch22, ppi_ch23, ppi_ch24, ppi_ch25, ppi_ch26,
         ppi_ch27, ppi_ch28, ppi_ch29,
     );
 
-    // The BLE controller reserves some memory for its internal state.
-    // The amount of memory needed depends on which controller features are enabled
-    // and how many connections it is configured to serve. A warning will be issued
-    // if the amount requested is too low or too high.
-    let memory = {
-        static MEM: StaticCell<nrf_sdc::Mem<1432>> = StaticCell::new();
-        MEM.init_with(|| {
+    bind_interrupts!(struct RngIrq {
+        RNG => InterruptHandler<peripherals::RNG>;
+    });
+
+    // Statically store the BLE controller's random number generator to
+    // simplify lifetime constraints.
+    let mut controller_rng = {
+        static RNG: StaticCell<Rng<'static, peripherals::RNG, mode::Async>> = StaticCell::new();
+        RNG.init_with(|| Rng::new(rng, RngIrq))
+    };
+
+    // The BLE controller will own the RNG peripheral. Use it to seed another random
+    // number generator for the host. The host only uses this to seed its internal
+    // RNG and this RNG will drop at end of function.
+    let mut host_rng = match ChaChaRng::from_rng(&mut controller_rng) {
+        Ok(rng) => rng,
+        Err(_) => {
+            defmt::panic!("[ble] failed to initialize the BLE host's random number generator",)
+        }
+    };
+
+    // The Softdevice BLE controller reserves some memory for its own state.
+    // Will panic if not enough memory is provided. A log message will be emitted
+    // indicating the correct amount.
+    let controller_memory = {
+        static SDC_MEMORY: StaticCell<nrf_sdc::Mem<SDC_MEM>> = StaticCell::new();
+        SDC_MEMORY.init_with(|| {
             let mem = nrf_sdc::Mem::new();
             defmt::info!(
-                "[controller] memory reserved: {} bytes",
+                "[sdc] Softdevice memory reserved: {} bytes",
                 core::mem::size_of_val(&mem)
             );
             mem
         })
     };
 
-    match build_softdevice(peripherals, rng_driver, memory, mpsl) {
+    let controller = match build_softdevice(
+        softdevice_peripherals,
+        controller_rng,
+        controller_memory,
+        mpsl,
+    ) {
         Ok(sdc) => {
-            defmt::info!("[controller] initialized");
+            defmt::info!("[sdc] Softdevice BLE controller initialized");
             sdc
         }
         Err(error) => {
             defmt::panic!(
-                "[controller] unable to initialize, vendor error code: {}",
+                "[sdc] failed to initialize the Softdevice BLE controller, error code: {}",
                 error
-            );
+            )
         }
-    }
+    };
+
+    // Memory reserved for the BLE host's internal state.
+    let host_resources = {
+        static HOST_RESOURCES: StaticCell<BleResources> = StaticCell::new();
+        HOST_RESOURCES.init_with(BleResources::new)
+    };
+
+    trouble_host::new(controller, host_resources)
+        .set_random_address(address)
+        .set_random_generator_seed(&mut host_rng)
 }
 
 /// Convenience function to construct a [`SoftdeviceController`] with simple
 /// error return.
-fn build_softdevice<'a, const N: usize>(
+pub fn build_softdevice<'a>(
     softdevice_peripherals: nrf_sdc::Peripherals<'a>,
-    softdevice_rng_driver: &'a mut RngDriver,
-    softdevice_memory: &'a mut nrf_sdc::Mem<N>,
+    rng_driver: &'a mut Rng<'a, peripherals::RNG, Async>,
+    softdevice_memory: &'a mut nrf_sdc::Mem<SDC_MEM>,
     mpsl: &'a MultiprotocolServiceLayer,
 ) -> Result<SoftdeviceController<'a>, nrf_sdc::Error> {
     nrf_sdc::Builder::new()?
         .support_adv()?
         .support_peripheral()?
+        .support_dle_peripheral()?
+        .support_phy_update_peripheral()?
+        .support_le_2m_phy()?
         .peripheral_count(1)?
-        .build(
-            softdevice_peripherals,
-            softdevice_rng_driver,
-            mpsl,
-            softdevice_memory,
-        )
+        .build(softdevice_peripherals, rng_driver, mpsl, softdevice_memory)
 }

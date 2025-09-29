@@ -2,31 +2,39 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Board support module for the Arduino Nano 33 BLE.
+//! Board support module for the Arduino Nano 33 BLE (Rev2).
+//!
+//! Vendor's documentation available at:
+//! https://docs.arduino.cc/hardware/nano-33-ble-rev2/
 
 mod mpsl;
-mod rng_driver;
 mod sdc;
 
+use embassy_executor::Spawner;
 use embassy_nrf::config::{Config, Debug, HfclkSource, LfclkSource};
 use embassy_nrf::interrupt::Priority;
+use nrf_mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::SoftdeviceController;
+use nrf_sdc::mpsl::Flash;
+use static_cell::StaticCell;
+use trouble_host::prelude::DefaultPacketPool;
+use trouble_host::{Address, Host, Stack};
 
-use crate::boards::nano_33_ble::rng_driver::RngDriver;
+/// Board support for the Arduino Nano 33 BLE (Rev2).
+pub struct Board<'mpsl, 'sdc> {
+    /// Reference to the MPSL's location in static memory.
+    mpsl: &'mpsl MultiprotocolServiceLayer<'static>,
 
-/// Board support for the Arduino Nano 33 BLE.
-pub struct Board<'mpsl, 'rng> {
-    /// Multiprotocol service layer.
-    service_layer: &'mpsl nrf_sdc::mpsl::MultiprotocolServiceLayer<'static>,
+    /// Flash storage handler.
+    flash: Flash<'static>,
 
-    /// Random number generator.
-    pub rng_driver: RngDriver<'rng>,
+    /// BLE stack (Controller & host resources).
+    ble_stack: Stack<'sdc, SoftdeviceController<'mpsl>, DefaultPacketPool>,
 }
 
-impl<'mpsl, 'sdc, 'rng> Board<'mpsl, 'rng> {
-    /// Initialize the board and its peripherals.
-    /// The BLE controller remains uninitialized.
-    pub fn init(task_spawner: &embassy_executor::Spawner) -> Self {
+impl<'mpsl, 'sdc> Board<'mpsl, 'sdc> {
+    /// Initialize the [`Board`], its peripherals, and the BLE stack.
+    pub fn init(task_spawner: &Spawner) -> Self {
         let mut board_config = Config::default();
 
         // This board has external oscillators for the high and low frequency clocks.
@@ -43,35 +51,28 @@ impl<'mpsl, 'sdc, 'rng> Board<'mpsl, 'rng> {
 
         let peripherals = embassy_nrf::init(board_config);
 
-        let service_layer = mpsl::init_service_layer(
-            peripherals.RTC0,
-            peripherals.TIMER0,
-            peripherals.TEMP,
-            peripherals.PPI_CH19,
-            peripherals.PPI_CH30,
-            peripherals.PPI_CH31,
-            task_spawner,
-        );
+        // Initialize the MPSL and start its event loop task which will run forever.
+        let mpsl = {
+            static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
+            MPSL.init_with(|| {
+                mpsl::init_service_layer(
+                    peripherals.RTC0,
+                    peripherals.TIMER0,
+                    peripherals.TEMP,
+                    peripherals.PPI_CH19,
+                    peripherals.PPI_CH30,
+                    peripherals.PPI_CH31,
+                )
+            })
+        };
+        task_spawner.must_spawn(mpsl::mpsl_task(mpsl));
 
-        let rng_driver = RngDriver::new(peripherals.RNG);
+        // The MPSL offers a flash storage interface that schedules reads &
+        // writes to not conflict with the radio.
+        let flash = Flash::take(mpsl, peripherals.NVMC);
 
-        Self {
-            service_layer,
-            rng_driver,
-        }
-    }
-
-    /// Initialize the BLE controller.
-    pub fn get_ble_controller(&'mpsl mut self) -> SoftdeviceController<'sdc>
-    where
-        'mpsl: 'sdc,
-        'rng: 'sdc,
-    {
-        // SAFETY: As `self` is initialized, peripherals are safe to use and the BLE
-        // controller is the only device using these PPI channels.
-        let peripherals = unsafe { embassy_nrf::Peripherals::steal() };
-
-        sdc::init_ble_controller(
+        let ble_address = Self::get_ble_address();
+        let ble_stack = sdc::init_ble_stack(
             peripherals.PPI_CH17,
             peripherals.PPI_CH18,
             peripherals.PPI_CH20,
@@ -84,8 +85,40 @@ impl<'mpsl, 'sdc, 'rng> Board<'mpsl, 'rng> {
             peripherals.PPI_CH27,
             peripherals.PPI_CH28,
             peripherals.PPI_CH29,
-            self.service_layer,
-            &mut self.rng_driver,
-        )
+            peripherals.RNG,
+            mpsl,
+            ble_address,
+        );
+
+        Self {
+            mpsl,
+            flash,
+            ble_stack,
+        }
+    }
+
+    /// Returns the BLE [`Host`] of this [`Board`].
+    pub fn get_ble_host(&'sdc self) -> Host<'sdc, SoftdeviceController<'mpsl>, DefaultPacketPool> {
+        self.ble_stack.build()
+    }
+
+    /// Retrieve the MAC address of this [`Board`].
+    // TODO: Ensure the returned address matches the QR Code on the MCU.
+    fn get_ble_address() -> Address {
+        // The manufacturer of the board has burned a unique MAC address to the
+        // board's Factory Information Configuration Registers (FICR).
+        let ficr = embassy_nrf::pac::FICR;
+
+        // Lower 16 bits of DEVICEADDR[1] contain the most significant bits of the MAC.
+        let msb = u64::from(ficr.deviceaddr(1).read() & 0x0000ffff);
+
+        // DEVICEADDR[0] contains the least significant bits of the MAC.
+        let lsb = u64::from(ficr.deviceaddr(0).read());
+
+        // Shift the `msb` over by 32-bits and append the `lsb`.
+        let address = msb << 32 | lsb;
+
+        // UNWRAP: Infallible. Taking lower 6 bytes from an 8 byte value.
+        Address::random(address.to_le_bytes()[0..6].try_into().unwrap())
     }
 }

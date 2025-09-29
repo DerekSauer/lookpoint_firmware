@@ -41,10 +41,11 @@ use static_cell::StaticCell;
 /// application. Two slots is sufficient for flash and temperature operations.
 const NUM_TIMESLOTS: usize = 2;
 
-/// Task that will run the MPSL's event loop. Started when the MPSL is
-/// initialized.
+/// Task that will run the MPSL's event loop.
+/// Must be started before invoking any functionality that uses the MPSL such as
+/// flash or BLE operations.
 #[embassy_executor::task]
-async fn mpsl_task(mpsl: &'static mpsl::MultiprotocolServiceLayer<'static>) -> ! {
+pub async fn mpsl_task(mpsl: &'static mpsl::MultiprotocolServiceLayer<'static>) -> ! {
     defmt::info!("[mpsl] event loop task started");
     mpsl.run().await;
 }
@@ -56,15 +57,14 @@ async fn mpsl_task(mpsl: &'static mpsl::MultiprotocolServiceLayer<'static>) -> !
 /// The MPSL is critical to the device's function. Failure to initialize the
 /// MPSL will cause this function to panic.
 #[allow(clippy::too_many_arguments)]
-pub fn init_service_layer<'mpsl>(
+pub fn init_service_layer(
     rtc0: Peri<'static, peripherals::RTC0>,
     timer0: Peri<'static, peripherals::TIMER0>,
     temp: Peri<'static, peripherals::TEMP>,
     ppi_ch19: Peri<'static, peripherals::PPI_CH19>,
     ppi_ch30: Peri<'static, peripherals::PPI_CH30>,
     ppi_ch31: Peri<'static, peripherals::PPI_CH31>,
-    task_spawner: &embassy_executor::Spawner,
-) -> &'mpsl MultiprotocolServiceLayer<'static> {
+) -> MultiprotocolServiceLayer<'static> {
     let peripherals = mpsl::Peripherals::new(rtc0, timer0, temp, ppi_ch19, ppi_ch30, ppi_ch31);
 
     // Map hardware interrupts to interrupt handlers provided by the MPSL.
@@ -100,29 +100,13 @@ pub fn init_service_layer<'mpsl>(
         })
     };
 
-    // The MPSL will remain persistent for the entire run time of the device.
-    let mpsl = {
-        static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
-        MPSL.init_with(|| {
-            match MultiprotocolServiceLayer::with_timeslots(
-                peripherals,
-                MpslIrqs,
-                clock_config,
-                memory,
-            ) {
-                Ok(mpsl) => {
-                    defmt::info!("[mpsl] initialized");
-                    mpsl
-                }
-                Err(error) => {
-                    defmt::panic!("[mpsl] unable to initialize, error code: {}", error);
-                }
-            }
-        })
-    };
-
-    // The task that pumps the MPSL's event loop will run forever.
-    task_spawner.must_spawn(mpsl_task(mpsl));
-
-    mpsl
+    match MultiprotocolServiceLayer::with_timeslots(peripherals, MpslIrqs, clock_config, memory) {
+        Ok(mpsl) => {
+            defmt::info!("[mpsl] initialized");
+            mpsl
+        }
+        Err(error) => {
+            defmt::panic!("[mpsl] unable to initialize, error code: {}", error);
+        }
+    }
 }
